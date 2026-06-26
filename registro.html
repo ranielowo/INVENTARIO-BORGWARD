@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inventario Taller</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    text-align: center;
+  }
+
+  .logo-bar {
+    background: #1151F0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+  }
+  .logo-bar span {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  .filtro-badge {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1a3a5c;
+    font-size: 22px;
+    font-weight: bold;
+    padding: 10px 24px;
+    border-radius: 50px;
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+  }
+
+  .filtro-tipo {
+    color: #555;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .cantidad-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .cantidad-row button {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2px solid #1a3a5c;
+    background: white;
+    color: #1a3a5c;
+    font-size: 26px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .cantidad-row button:active { background: #e8f0fe; }
+  #cantidad-display {
+    font-size: 36px;
+    font-weight: bold;
+    color: #1a3a5c;
+    min-width: 48px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: transform .1s, opacity .1s;
+    letter-spacing: .5px;
+  }
+  .btn:active { transform: scale(.97); opacity: .9; }
+
+  .btn-salida {
+    background: #c0392b;
+    color: white;
+  }
+  .btn-entrada {
+    background: #27ae60;
+    color: white;
+  }
+
+  .estado-stock {
+    background: #fff8e1;
+    border: 1px solid #f9a825;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #5d4037;
+    margin-bottom: 20px;
+  }
+  .estado-stock strong { color: #e65100; }
+
+  /* Pantalla de éxito */
+  #pantalla-ok {
+    display: none;
+    text-align: center;
+  }
+  .check-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 40px;
+  }
+  .check-verde  { background: #27ae60; color: white; }
+  .check-azul   { background: #2980b9; color: white; }
+
+  #pantalla-ok h2 { font-size: 22px; color: #1a3a5c; margin-bottom: 8px; }
+  #pantalla-ok p  { color: #555; font-size: 14px; margin-bottom: 4px; }
+
+  .btn-volver {
+    margin-top: 20px;
+    background: #1a3a5c;
+    color: white;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+  }
+
+  /* Pantalla de error */
+  #pantalla-err { display: none; text-align: center; }
+  .check-rojo { background: #c0392b; color: white; }
+  #pantalla-err h2 { color: #c0392b; margin-bottom: 8px; }
+  #pantalla-err p  { color: #555; font-size: 14px; }
+
+  .spinner {
+    display: none;
+    margin: 12px auto;
+    width: 36px; height: 36px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #1a3a5c;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card" id="pantalla-main">
+  <div class="logo-bar"><span>BORGWARD AUTO REPAIR</span></div>
+
+  <div class="filtro-badge" id="codigo-display">—</div>
+  <div class="filtro-tipo" id="tipo-display">Cargando...</div>
+
+  <div class="estado-stock" id="stock-display">
+    Consultando stock...
+  </div>
+
+  <div class="cantidad-row">
+    <button onclick="cambiarCantidad(-1)">−</button>
+    <div id="cantidad-display">1</div>
+    <button onclick="cambiarCantidad(1)">+</button>
+  </div>
+
+  <button class="btn btn-salida" onclick="registrar('SALIDA')">
+    SALIDA
+  </button>
+  <button class="btn btn-entrada" onclick="registrar('ENTRADA')">
+    ENTRADA
+  </button>
+
+  <div class="spinner" id="spinner"></div>
+</div>
+
+<!-- Pantalla OK -->
+<div class="card" id="pantalla-ok">
+  <div class="check-circle" id="ok-circle">✓</div>
+  <h2 id="ok-titulo">Registrado</h2>
+  <p id="ok-detalle"></p>
+  <p id="ok-hora"></p>
+  <p id="ok-stock"></p>
+  <button class="btn-volver" onclick="volver()">← Volver</button>
+</div>
+
+<!-- Pantalla Error -->
+<div class="card" id="pantalla-err">
+  <div class="check-circle check-rojo">✗</div>
+  <h2>Error de conexión</h2>
+  <p>No se pudo registrar el movimiento.<br>Verifica tu conexión a internet e intenta de nuevo.</p>
+  <button class="btn-volver" onclick="volver()">← Intentar de nuevo</button>
+</div>
+
+<script>
+// ── CONFIGURACIÓN ─────────────────────────────────────────────────
+// Pega aquí la URL de tu Google Apps Script después de desplegarlo
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw79xI-UXJqvvfDGpNxaVj7y3u4lLOGJTcZnVk2sjtpgfNYZaC_rAfD-gLN4UBFpEm-/exec";
+
+// ── Datos de filtros ──────────────────────────────────────────────
+const FILTROS = {
+  "ML1000":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1001":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1002":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1003":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1004":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1005":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1006":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1007":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1008":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1009":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1010":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1011":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1012":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1013":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1014":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1017":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML1030":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ML2000":      { tipo: "Filtro de Aceite Mann Filter" },
+  "ACEITE_5W30":          { tipo: "Aceite Motor 5W-30" },
+  "ACEITE_10W40":         { tipo: "Aceite Motor 10W-40" },
+  "ACEITE_15W40":         { tipo: "Aceite Motor 15W-40" },
+  "ACEITE_20W50":         { tipo: "Aceite Motor 20W-50" },
+  "ACEITE_80W90":         { tipo: "Aceite 80W-90" },
+  "FRAM_PH5548":          { tipo: "Filtro de Aceite Fram PH5548" },
+  "FRAM_PH5796":          { tipo: "Filtro de Aceite Fram PH5796" },
+  "PURO_TL15505":         { tipo: "Filtro de Aceite Purolator TL15505" },
+  "PURO_TL15436":         { tipo: "Filtro de Aceite Purolator TL15436" },
+  "GRASA_HOMOCINETICA":   { tipo: "Grasa para Junta Homocinética" },
+  "LIQ_INYECTORES":       { tipo: "Líquido Limpiador de Inyectores" },
+  "LIQ_DIRECCION":        { tipo: "Líquido Dirección Hidráulica" },
+};
+
+// ── Estado ────────────────────────────────────────────────────────
+let codigoActual = "";
+let cantidadActual = 1;
+let stockActual = null;
+
+// ── Init: leer código desde URL ───────────────────────────────────
+window.onload = function() {
+  const params = new URLSearchParams(window.location.search);
+  codigoActual = params.get("id") || "";
+
+  if (!codigoActual || !FILTROS[codigoActual]) {
+    document.getElementById("codigo-display").textContent = "ERROR";
+    document.getElementById("tipo-display").textContent = "Código no reconocido";
+    document.getElementById("stock-display").textContent = "⚠️ Escanea el QR correcto";
+    return;
+  }
+
+  document.getElementById("codigo-display").textContent = codigoActual;
+  document.getElementById("tipo-display").textContent = FILTROS[codigoActual].tipo;
+
+  consultarStock();
+};
+
+// ── Consultar stock actual desde Google Sheets ────────────────────
+function consultarStock() {
+  if (SCRIPT_URL === "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT") {
+    document.getElementById("stock-display").innerHTML =
+      "Stock: <strong>configura el script primero</strong>";
+    return;
+  }
+  fetch(`${SCRIPT_URL}?action=stock&id=${codigoActual}`)
+    .then(r => r.json())
+    .then(data => {
+      stockActual = data.stock;
+      const color = stockActual <= 2 ? "#c0392b" : "#27ae60";
+      document.getElementById("stock-display").innerHTML =
+        `Stock actual: <strong style="color:${color}">${stockActual} pza(s)</strong>`;
+    })
+    .catch(() => {
+      document.getElementById("stock-display").textContent = "Stock: sin conexión";
+    });
+}
+
+// ── Cambiar cantidad ──────────────────────────────────────────────
+function cambiarCantidad(delta) {
+  cantidadActual = Math.max(1, cantidadActual + delta);
+  document.getElementById("cantidad-display").textContent = cantidadActual;
+}
+
+// ── Registrar movimiento ──────────────────────────────────────────
+function registrar(tipo) {
+  if (SCRIPT_URL === "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT") {
+    mostrarOk(tipo, cantidadActual, "DEMO — configura el script para guardar en Sheets");
+    return;
+  }
+
+  document.getElementById("pantalla-main").style.display = "none";
+  document.getElementById("spinner").style.display = "block";
+
+  const ahora = new Date();
+  const hora  = ahora.toLocaleTimeString("es-MX", { hour:"2-digit", minute:"2-digit" });
+  const fecha = ahora.toLocaleDateString("es-MX");
+
+  const url = `${SCRIPT_URL}?action=registrar&id=${codigoActual}`
+            + `&tipo=${tipo}&cantidad=${cantidadActual}`
+            + `&fecha=${encodeURIComponent(fecha)}&hora=${encodeURIComponent(hora)}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById("spinner").style.display = "none";
+      if (data.ok) {
+        mostrarOk(tipo, cantidadActual, fecha + " " + hora, data.stockNuevo);
+      } else {
+        mostrarError();
+      }
+    })
+    .catch(() => {
+      document.getElementById("spinner").style.display = "none";
+      mostrarError();
+    });
+}
+
+function mostrarOk(tipo, cantidad, horaStr, stockNuevo) {
+  const esSalida = tipo === "SALIDA";
+  document.getElementById("ok-circle").className =
+    "check-circle " + (esSalida ? "check-rojo" : "check-verde");
+  document.getElementById("ok-titulo").textContent =
+    esSalida ? "Salida registrada" : "Entrada registrada";
+  document.getElementById("ok-detalle").textContent =
+    `${codigoActual} · ${cantidad} pza(s)`;
+  document.getElementById("ok-hora").textContent = horaStr;
+  document.getElementById("ok-stock").textContent =
+    stockNuevo !== undefined ? `Stock nuevo: ${stockNuevo} pza(s)` : "";
+
+  document.getElementById("pantalla-main").style.display = "none";
+  document.getElementById("pantalla-ok").style.display   = "block";
+}
+
+function mostrarError() {
+  document.getElementById("pantalla-main").style.display = "none";
+  document.getElementById("pantalla-err").style.display  = "block";
+}
+
+function volver() {
+  cantidadActual = 1;
+  document.getElementById("cantidad-display").textContent = "1";
+  document.getElementById("pantalla-ok").style.display   = "none";
+  document.getElementById("pantalla-err").style.display  = "none";
+  document.getElementById("pantalla-main").style.display = "block";
+  consultarStock();
+}
+</script>
+</body>
+</html>
